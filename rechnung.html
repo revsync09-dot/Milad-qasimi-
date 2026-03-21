@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="de" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rechnungsprogramm</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0ede8;
+  --surface: #ffffff;
+  --primary: #18181b;
+  --accent: #b5925a;
+  --accent-light: #e8d9c0;
+  --text: #18181b;
+  --muted: #71717a;
+  --border: #ddd8d0;
+  --radius: 10px;
+  --shadow: 0 2px 20px rgba(0,0,0,0.07);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* TOPBAR */
+.topbar { background: var(--primary); height: 58px; display: flex; align-items: center; justify-content: space-between; padding: 0 36px; position: sticky; top: 0; z-index: 200; }
+.topbar-brand { display: flex; align-items: center; gap: 14px; }
+.topbar-mark { width: 34px; height: 34px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; color: var(--primary); }
+.topbar-name { font-size: 15px; font-weight: 500; color: #fff; }
+.topbar-sub { font-size: 11px; color: var(--accent); margin-top: 1px; }
+.lang-switch { display: flex; gap: 6px; }
+.lang-btn { background: transparent; border: 1px solid rgba(255,255,255,0.18); color: rgba(255,255,255,0.7); padding: 5px 16px; border-radius: 20px; font-family: inherit; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.18s; letter-spacing: 0.04em; }
+.lang-btn.active { background: var(--accent); border-color: var(--accent); color: var(--primary); font-weight: 600; }
+.lang-btn:hover:not(.active) { border-color: rgba(255,255,255,0.4); color: #fff; }
+
+/* LAYOUT */
+.wrap { max-width: 1340px; margin: 0 auto; padding: 28px 24px; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 24px; align-items: start; }
+
+/* CARD */
+.card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.card-head { background: var(--primary); padding: 14px 22px; color: var(--accent); font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 600; border-bottom: 2px solid var(--accent); }
+.card-body { padding: 22px; }
+
+/* SECTION */
+.sec { font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); padding-bottom: 7px; border-bottom: 1.5px solid var(--accent-light); margin: 22px 0 14px; }
+.sec:first-child { margin-top: 0; }
+
+/* FORM */
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.fg { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.fg label { font-size: 11.5px; font-weight: 500; color: var(--muted); }
+.fg input, .fg select, .fg textarea { border: 1.5px solid var(--border); border-radius: 7px; padding: 8px 11px; font-family: inherit; font-size: 13.5px; color: var(--text); background: #fafaf8; outline: none; transition: border-color 0.15s, background 0.15s; -webkit-appearance: none; appearance: none; }
+.fg input:focus, .fg select:focus, .fg textarea:focus { border-color: var(--accent); background: #fff; }
+.fg textarea { resize: vertical; min-height: 64px; }
+.fg select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2371717a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+
+/* LOGO UPLOAD */
+.logo-upload-area { border: 2px dashed var(--border); border-radius: 8px; padding: 20px 16px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; background: #fafaf8; }
+.logo-upload-area:hover { border-color: var(--accent); background: #fdf8f2; }
+.logo-upload-area input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; border: none; padding: 0; background: none; }
+.logo-upload-icon { width: 42px; height: 42px; background: var(--accent-light); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; }
+.logo-upload-icon svg { width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.logo-upload-text { font-size: 13px; color: var(--text); font-weight: 500; }
+.logo-upload-sub { font-size: 11px; color: #aaa; margin-top: 3px; }
+.logo-preview-wrap { display: none; align-items: center; gap: 14px; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 14px; background: #fafaf8; }
+.logo-preview-wrap img { object-fit: contain; border-radius: 4px; }
+.logo-remove { margin-left: auto; background: #fee2e2; color: #b91c1c; border: none; border-radius: 6px; padding: 5px 12px; font-family: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; font-weight: 500; }
+.logo-remove:hover { background: #fecaca; }
+.logo-size-row { display: none; align-items: center; gap: 10px; margin-top: 8px; }
+.logo-size-row label { font-size: 11.5px; color: var(--muted); white-space: nowrap; font-weight: 500; }
+.logo-size-row input[type=range] { flex: 1; accent-color: var(--accent); height: 4px; }
+.logo-size-row span { font-size: 12px; color: var(--muted); min-width: 36px; text-align: right; }
+
+/* ITEMS TABLE */
+.tbl { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+.tbl th { background: var(--primary); color: var(--accent); padding: 7px 9px; font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; text-align: left; font-weight: 600; }
+.tbl td { padding: 5px 4px; vertical-align: middle; }
+.tbl tr:nth-child(even) td { background: #f7f5f2; }
+.tbl input { width: 100%; border: 1.5px solid var(--border); border-radius: 6px; padding: 5px 7px; font-size: 12.5px; font-family: inherit; background: transparent; outline: none; transition: border-color 0.15s; }
+.tbl input:focus { border-color: var(--accent); background: #fff; }
+.del-btn { background: #fee2e2; color: #b91c1c; border: none; border-radius: 5px; padding: 4px 8px; cursor: pointer; font-size: 14px; line-height: 1; font-weight: 600; }
+.del-btn:hover { background: #fecaca; }
+
+/* BUTTONS */
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px; border-radius: 7px; font-family: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; border: none; transition: all 0.18s; white-space: nowrap; }
+.btn-ghost { background: transparent; border: 1.5px solid var(--accent); color: var(--accent); }
+.btn-ghost:hover { background: var(--accent); color: var(--primary); }
+.btn-dark { background: var(--primary); color: #fff; }
+.btn-dark:hover { background: #2c2c30; }
+.btn-gold { background: var(--accent); color: var(--primary); font-weight: 600; }
+.btn-gold:hover { background: #a07d47; }
+.action-row { display: flex; gap: 10px; padding: 16px 22px; border-top: 1.5px solid var(--border); flex-wrap: wrap; align-items: center; }
+
+/* PREVIEW */
+.preview-col { position: sticky; top: 70px; }
+
+/* INVOICE DOCUMENT */
+.inv-doc { background: #fff; padding: 38px 42px; font-family: 'IBM Plex Sans', sans-serif; font-size: 12.5px; line-height: 1.65; color: #222; }
+.inv-header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; }
+.inv-logo-zone { flex-shrink: 0; }
+.inv-logo-zone img { display: block; object-fit: contain; }
+.inv-logo-placeholder { width: 64px; height: 64px; background: var(--accent-light); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', serif; font-size: 28px; color: var(--accent); font-weight: 700; }
+.inv-sender-block { text-align: right; font-size: 12px; line-height: 1.8; }
+.inv-sender-block strong { font-size: 15px; font-family: 'Cormorant Garamond', serif; font-weight: 600; display: block; margin-bottom: 2px; }
+.inv-divider { border: none; border-top: 2px solid var(--primary); margin: 6px 0 22px; }
+.inv-addr-row { display: flex; justify-content: space-between; margin-bottom: 26px; gap: 20px; }
+.inv-sender-mini { font-size: 9.5px; color: #bbb; border-bottom: 1px solid #ece8e2; padding-bottom: 4px; margin-bottom: 9px; }
+.inv-recipient-block { font-size: 12.5px; line-height: 1.8; }
+.inv-meta-block { text-align: right; font-size: 12px; line-height: 1.9; }
+.inv-title { font-family: 'Cormorant Garamond', serif; font-size: 34px; font-weight: 700; color: var(--primary); letter-spacing: -0.03em; line-height: 1; margin-bottom: 8px; }
+.inv-title-accent { display: inline-block; width: 44px; height: 3px; background: var(--accent); border-radius: 2px; margin-bottom: 16px; }
+.inv-greeting { font-size: 12px; color: #555; margin-bottom: 16px; line-height: 1.75; }
+.inv-tbl { width: 100%; border-collapse: collapse; }
+.inv-tbl thead tr th { background: var(--primary); color: var(--accent); padding: 8px 10px; font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 600; text-align: left; }
+.inv-tbl thead tr th.r { text-align: right; }
+.inv-tbl tbody tr td { padding: 7px 10px; font-size: 12px; border-bottom: 1px solid #f0ede8; }
+.inv-tbl tbody tr:nth-child(even) td { background: #fafaf8; }
+.inv-tbl td.r { text-align: right; }
+.inv-totals-wrap { display: flex; justify-content: flex-end; }
+.inv-totals-tbl { width: 52%; border-collapse: collapse; }
+.inv-totals-tbl td { padding: 5px 10px; font-size: 12px; }
+.inv-totals-tbl td.r { text-align: right; }
+.row-net td { border-top: 2px solid var(--border); color: #333; padding-top: 8px; }
+.row-tax td { color: #666; }
+.row-final td { background: var(--primary); color: #fff; font-weight: 600; font-size: 13.5px; padding: 9px 10px; }
+.row-final td.r { color: var(--accent); font-size: 15px; }
+.inv-notes-block { margin-top: 22px; font-size: 12px; color: #555; line-height: 1.8; }
+.inv-sign-block { margin-top: 24px; font-size: 12.5px; line-height: 1.8; }
+.inv-footer-bar { margin-top: 28px; border-top: 1.5px solid var(--border); padding-top: 14px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; font-size: 11px; color: #666; }
+.inv-footer-label { font-size: 9.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 5px; }
+
+.rtl-doc { direction: rtl; font-family: Tahoma, 'IBM Plex Sans', sans-serif; }
+.rtl-doc .inv-header-row { flex-direction: row-reverse; }
+.rtl-doc .inv-sender-block { text-align: left; }
+.rtl-doc .inv-addr-row { flex-direction: row-reverse; }
+.rtl-doc .inv-meta-block { text-align: left; }
+.rtl-doc .inv-tbl thead tr th { text-align: right; }
+.rtl-doc .inv-tbl thead tr th.r { text-align: left; }
+.rtl-doc .inv-tbl td.r { text-align: left; }
+.rtl-doc .inv-totals-wrap { justify-content: flex-start; }
+.rtl-doc .inv-totals-tbl td.r { text-align: left; }
+.rtl-doc .inv-footer-bar { direction: rtl; }
+
+
+@media print {
+  body { background: #fff !important; }
+  .topbar, .form-col, .action-row { display: none !important; }
+  .wrap { display: block !important; padding: 0 !important; }
+  .preview-col { position: static !important; }
+  .card { box-shadow: none !important; border-radius: 0 !important; }
+  .card-head { display: none !important; }
+  .card-body { padding: 0 !important; }
+  .inv-doc { padding: 16px 20px !important; }
+}
+
+@media (max-width: 960px) {
+  .wrap { grid-template-columns: 1fr; }
+  .preview-col { position: static; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-mark">R</div>
+    <div>
+      <div class="topbar-name" id="tb-name">Rechnungsprogramm</div>
+      <div class="topbar-sub" id="tb-sub">برنامه صورتحساب</div>
+    </div>
+  </div>
+  <div class="lang-switch">
+    <button class="lang-btn active" onclick="setLang('de')">DE</button>
+    <button class="lang-btn" onclick="setLang('fa')">FA</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="form-col">
+    <div class="card">
+      <div class="card-head" id="lbl-formtitle">Rechnung erstellen</div>
+      <div class="card-body">
+
+        <div class="sec" id="lbl-sec-logo">Firmenlogo</div>
+        <div id="logo-upload-area" class="logo-upload-area">
+          <input type="file" accept="image/*" onchange="handleLogo(this)">
+          <div class="logo-upload-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </div>
+          <div class="logo-upload-text" id="lbl-logo-text">Logo hochladen</div>
+          <div class="logo-upload-sub" id="lbl-logo-sub">PNG, JPG, SVG — max. 2 MB</div>
+        </div>
+        <div id="logo-preview-wrap" class="logo-preview-wrap">
+          <img id="logo-preview-img" src="" alt="Logo" style="max-height:60px;max-width:160px">
+          <button class="logo-remove" onclick="removeLogo()" id="lbl-logo-remove">Entfernen</button>
+        </div>
+        <div id="logo-size-row" class="logo-size-row">
+          <label id="lbl-logo-size">Grösse</label>
+          <input type="range" min="40" max="200" value="80" id="logo-size-range" oninput="updateLogoSize(this.value)">
+          <span id="logo-size-val">80px</span>
+        </div>
+
+        <div class="sec" id="lbl-sec-sender">Meine Firma</div>
+        <div class="row2">
+          <div class="fg"><label id="lbl-company">Firmenname</label><input id="f-company" placeholder="Musterfirma GmbH" oninput="rp()"></div>
+          <div class="fg"><label id="lbl-uid">UID-Nummer</label><input id="f-uid" placeholder="ATU12345678" oninput="rp()"></div>
+        </div>
+        <div class="row2">
+          <div class="fg"><label id="lbl-street">Strasse &amp; Nr.</label><input id="f-street" placeholder="Musterstrasse 1" oninput="rp()"></div>
+          <div class="fg"><label id="lbl-city">PLZ &amp; Ort</label><input id="f-city" placeholder="1010 Wien" oninput="rp()"></div>
+        </div>
+        <div class="row3">
+          <div class="fg"><label id="lbl-tel">Telefon</label><input id="f-tel" placeholder="+43 1 234 5678" oninput="rp()"></div>
+          <div class="fg"><label id="lbl-email">E-Mail</label><input id="f-email" placeholder="office@firma.at" oninput="rp()"></div>
+          <div class="fg"><label id="lbl-web">Website</label><input id="f-web" placeholder="www.firma.at" oninput="rp()"></div>
+        </div>
+        <div class="row2">
+          <div class="fg"><label id="lbl-iban">IBAN</label><input id="f-iban" placeholder="AT12 3456 7890 1234 5678" oninput="rp()"></div>
+          <div class="fg"><label id="lbl-bic">BIC</label><input id="f-bic" placeholder="RZOOAT2L" oninput="rp()"></div>
+        </div>
+
+        <div class="sec" id="lbl-sec-recipient">Rechnungsempfanger</div>
+        <div class="row2">
+          <div class="fg"><label id="lbl-rname">Name / Firma</label><input id="r-name" placeholder="Kunde GmbH" oninput="rp()"></div>
+          <div class="fg"><label id="lbl-rstreet">Strasse &amp; Nr.</label><input id="r-street" placeholder="Kundenstrasse 5" oninput="rp()"></div>
+        </div>
+        <div class="row2">
+          <div class="fg"><label id="lbl-rplz">PLZ &amp; Ort</label><input id="r-city" placeholder="1010 Wien" oninput="rp()"></div>
+          <div class="fg"><label id="lbl-rcountry">Land</label><input id="r-country" placeholder="Osterreich" oninput="rp()"></div>
+        </div>
+
+        <div class="sec" id="lbl-sec-details">Rechnungsdetails</div>
+        <div class="row3">
+          <div class="fg"><label id="lbl-invnr">Rechnungsnummer</label><input id="inv-nr" placeholder="2025-001" oninput="rp()"></div>
+          <div class="fg"><label id="lbl-invdate">Datum</label><input id="inv-date" type="date" oninput="rp()"></div>
+          <div class="fg"><label id="lbl-duedate">Falligkeitsdatum</label><input id="inv-due" type="date" oninput="rp()"></div>
+        </div>
+        <div class="row2">
+          <div class="fg">
+            <label id="lbl-vat">MwSt. %</label>
+            <select id="inv-vat" onchange="rp()">
+              <option value="20">20% — Normalsatz (AT)</option>
+              <option value="10">10% — Ermassigte Steuer</option>
+              <option value="13">13% — Ermassigte Steuer</option>
+              <option value="0">0% — Steuerfrei</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label id="lbl-currency">Wahrung</label>
+            <select id="inv-currency" onchange="rp()">
+              <option value="EUR">EUR — Euro</option>
+              <option value="USD">USD — US-Dollar</option>
+              <option value="CHF">CHF — Schweizer Franken</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sec" id="lbl-sec-items">Positionen</div>
+        <table class="tbl" id="items-tbl">
+          <thead><tr>
+            <th style="width:26px">#</th>
+            <th id="th-desc">Bezeichnung</th>
+            <th style="width:58px" id="th-qty">Menge</th>
+            <th style="width:70px" id="th-unit">Einheit</th>
+            <th style="width:88px" id="th-price">Einzelpreis</th>
+            <th style="width:88px" id="th-total">Gesamt</th>
+            <th style="width:26px"></th>
+          </tr></thead>
+          <tbody id="items-body"></tbody>
+        </table>
+        <button class="btn btn-ghost" style="margin-top:2px" onclick="addItem()" id="btn-additem">+ Position hinzufugen</button>
+
+        <div class="sec" id="lbl-sec-notes">Notizen / Zahlungsbedingungen</div>
+        <div class="fg">
+          <textarea id="inv-notes" placeholder="z.B. Bitte uberweisen Sie den Betrag innerhalb von 14 Tagen auf das unten angegebene Konto." oninput="rp()"></textarea>
+        </div>
+
+        <div class="sec" id="lbl-sec-sign">Grussformel</div>
+        <div class="fg"><input id="inv-sign" placeholder="Mit freundlichen Grussen" oninput="rp()"></div>
+
+      </div>
+      <div class="action-row">
+        <button class="btn btn-dark" onclick="window.print()" id="btn-print">Drucken / PDF</button>
+        <button class="btn btn-gold" onclick="window.print()" id="btn-save">Als PDF speichern</button>
+        <button class="btn btn-ghost" onclick="resetForm()" id="btn-reset">Zurucksetzen</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="preview-col">
+    <div class="card">
+      <div class="card-head" id="lbl-preview">Vorschau</div>
+      <div class="card-body" style="padding:14px">
+        <div class="inv-doc" id="inv-doc"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const L = {
+  de: {
+    'lbl-formtitle':'Rechnung erstellen','tb-name':'Rechnungsprogramm','tb-sub':'برنامه صورتحساب',
+    'lbl-sec-logo':'Firmenlogo','lbl-logo-text':'Logo hochladen','lbl-logo-sub':'PNG, JPG, SVG — max. 2 MB','lbl-logo-remove':'Entfernen','lbl-logo-size':'Grösse',
+    'lbl-sec-sender':'Meine Firma','lbl-company':'Firmenname','lbl-uid':'UID-Nummer','lbl-street':'Strasse & Nr.','lbl-city':'PLZ & Ort','lbl-tel':'Telefon','lbl-email':'E-Mail','lbl-web':'Website','lbl-iban':'IBAN','lbl-bic':'BIC',
+    'lbl-sec-recipient':'Rechnungsempfänger','lbl-rname':'Name / Firma','lbl-rstreet':'Strasse & Nr.','lbl-rplz':'PLZ & Ort','lbl-rcountry':'Land',
+    'lbl-sec-details':'Rechnungsdetails','lbl-invnr':'Rechnungsnummer','lbl-invdate':'Datum','lbl-duedate':'Fälligkeitsdatum','lbl-vat':'MwSt. %','lbl-currency':'Währung',
+    'lbl-sec-items':'Positionen','th-desc':'Bezeichnung','th-qty':'Menge','th-unit':'Einheit','th-price':'Einzelpreis','th-total':'Gesamt',
+    'btn-additem':'+ Position hinzufügen',
+    'lbl-sec-notes':'Notizen / Zahlungsbedingungen','lbl-sec-sign':'Grussformel',
+    'btn-print':'Drucken / PDF','btn-save':'Als PDF speichern','btn-reset':'Zurücksetzen','lbl-preview':'Vorschau',
+    'inv-title':'Rechnung','inv-greeting':'Sehr geehrte Damen und Herren,\nvielen Dank für Ihr Vertrauen. Wir berechnen Ihnen hiermit folgende Leistungen:',
+    'inv-sign-default':'Mit freundlichen Grüssen',
+    'col-pos':'Pos.','col-desc':'Bezeichnung','col-qty':'Menge','col-unit':'Einheit','col-price':'Einzelpreis','col-total':'Gesamt',
+    'lbl-net':'Nettopreis','lbl-vat-total':'Zzgl. %V% MwSt.','lbl-grand':'Rechnungsbetrag',
+    'lbl-bank':'Bankverbindung','lbl-contact':'Kontakt','lbl-uid-footer':'UID-Nummer',
+    'lbl-date':'Datum','lbl-invnr-inv':'Rechnungsnummer','lbl-due-inv':'Fällig bis','lbl-uid-inv':'UID-Nummer',
+  },
+  fa: {
+    'lbl-formtitle':'ایجاد صورتحساب','tb-name':'Rechnungsprogramm','tb-sub':'برنامه صورتحساب',
+    'lbl-sec-logo':'لوگوی شرکت','lbl-logo-text':'آپلود لوگو','lbl-logo-sub':'PNG، JPG، SVG — حداکثر ۲ مگابایت','lbl-logo-remove':'حذف','lbl-logo-size':'اندازه',
+    'lbl-sec-sender':'شرکت من','lbl-company':'نام شرکت','lbl-uid':'شماره UID','lbl-street':'خیابان و شماره','lbl-city':'کد پستی و شهر','lbl-tel':'تلفن','lbl-email':'ایمیل','lbl-web':'وبسایت','lbl-iban':'IBAN','lbl-bic':'BIC',
+    'lbl-sec-recipient':'گیرنده صورتحساب','lbl-rname':'نام / شرکت','lbl-rstreet':'خیابان و شماره','lbl-rplz':'کد پستی و شهر','lbl-rcountry':'کشور',
+    'lbl-sec-details':'جزئیات صورتحساب','lbl-invnr':'شماره صورتحساب','lbl-invdate':'تاریخ','lbl-duedate':'تاریخ سررسید','lbl-vat':'مالیات بر ارزش افزوده %','lbl-currency':'واحد پول',
+    'lbl-sec-items':'اقلام','th-desc':'شرح','th-qty':'تعداد','th-unit':'واحد','th-price':'قیمت واحد','th-total':'جمع',
+    'btn-additem':'+ افزودن ردیف',
+    'lbl-sec-notes':'یادداشت / شرایط پرداخت','lbl-sec-sign':'امضا',
+    'btn-print':'چاپ / PDF','btn-save':'ذخیره به عنوان PDF','btn-reset':'پاک کردن','lbl-preview':'پیش‌نمایش',
+    'inv-title':'صورتحساب','inv-greeting':'با احترام،\nبا تشکر از اعتماد شما، خواهشمندیم مبالغ زیر را تسویه فرمایید:',
+    'inv-sign-default':'با احترام',
+    'col-pos':'ردیف','col-desc':'شرح','col-qty':'تعداد','col-unit':'واحد','col-price':'قیمت واحد','col-total':'جمع',
+    'lbl-net':'مبلغ خالص','lbl-vat-total':'مالیات بر ارزش افزوده %V%','lbl-grand':'مبلغ کل',
+    'lbl-bank':'اطلاعات بانکی','lbl-contact':'تماس','lbl-uid-footer':'شماره UID',
+    'lbl-date':'تاریخ','lbl-invnr-inv':'شماره صورتحساب','lbl-due-inv':'تاریخ سررسید','lbl-uid-inv':'شماره UID',
+  }
+};
+
+let lang = 'de';
+let items = [{ desc:'', qty:1, unit:'Stück', price:0 }];
+let logoDataUrl = null;
+let logoSize = 80;
+
+function t(k) { return L[lang][k] || ''; }
+
+function setLang(l) {
+  lang = l;
+  document.querySelectorAll('.lang-btn').forEach((b,i) => {
+    b.classList.toggle('active', (i===0&&l==='de')||(i===1&&l==='fa'));
+  });
+  Object.keys(L[l]).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = L[l][id];
+  });
+  // update placeholders
+  document.getElementById('inv-sign').placeholder = t('inv-sign-default');
+  renderItems();
+  rp();
+}
+
+function handleLogo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 2*1024*1024) {
+    alert(lang==='fa' ? 'فایل بزرگ است (حداکثر ۲ مگابایت)' : 'Datei zu groß (max. 2 MB)');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    logoDataUrl = e.target.result;
+    const img = document.getElementById('logo-preview-img');
+    img.src = logoDataUrl;
+    img.style.maxHeight = logoSize + 'px';
+    document.getElementById('logo-upload-area').style.display = 'none';
+    document.getElementById('logo-preview-wrap').style.display = 'flex';
+    document.getElementById('logo-size-row').style.display = 'flex';
+    rp();
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeLogo() {
+  logoDataUrl = null;
+  document.getElementById('logo-upload-area').style.display = 'block';
+  document.getElementById('logo-preview-wrap').style.display = 'none';
+  document.getElementById('logo-size-row').style.display = 'none';
+  document.getElementById('logo-preview-img').src = '';
+  rp();
+}
+
+function updateLogoSize(v) {
+  logoSize = +v;
+  document.getElementById('logo-size-val').textContent = v + 'px';
+  document.getElementById('logo-preview-img').style.maxHeight = v + 'px';
+  rp();
+}
+
+function addItem() {
+  items.push({ desc:'', qty:1, unit: lang==='fa'?'عدد':'Stück', price:0 });
+  renderItems();
+}
+
+function removeItem(i) {
+  items.splice(i, 1);
+  if (!items.length) items = [{ desc:'', qty:1, unit: lang==='fa'?'عدد':'Stück', price:0 }];
+  renderItems();
+}
+
+function renderItems() {
+  const tbody = document.getElementById('items-body');
+  tbody.innerHTML = '';
+  items.forEach((it, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="text-align:center;color:var(--muted);font-size:11px;padding:5px 2px">${i+1}</td>
+      <td><input value="${e(it.desc)}" placeholder="${lang==='fa'?'شرح خدمات':'Leistungsbeschreibung'}" onchange="items[${i}].desc=this.value;rp()"></td>
+      <td><input type="number" value="${it.qty}" min="0" step="1" style="text-align:center" onchange="items[${i}].qty=+this.value;rp()"></td>
+      <td><input value="${e(it.unit)}" onchange="items[${i}].unit=this.value;rp()"></td>
+      <td><input type="number" value="${it.price}" min="0" step="0.01" style="text-align:right" onchange="items[${i}].price=+this.value;rp()"></td>
+      <td style="text-align:right;font-size:12px;color:var(--muted);padding:5px 8px">${fa(it.qty*it.price)}</td>
+      <td style="padding:5px 2px"><button class="del-btn" onclick="removeItem(${i})">&times;</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  rp();
+}
+
+function e(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function fa(n) {
+  const cur = document.getElementById('inv-currency')?.value || 'EUR';
+  const sym = cur==='EUR'?'€':cur==='USD'?'$':'Fr.';
+  return n.toFixed(2).replace('.',',') + '\u202F' + sym;
+}
+
+function fd(d) {
+  if (!d) return '';
+  const [y,m,dd] = d.split('-');
+  return `${dd}.${m}.${y}`;
+}
+
+function calcTotals() {
+  const net = items.reduce((s,it) => s + it.qty*it.price, 0);
+  const vr = parseFloat(document.getElementById('inv-vat')?.value || 20) / 100;
+  const tax = net * vr;
+  return { net, tax, total: net+tax, vatPct: Math.round(vr*100) };
+}
+
+function rp() {
+  const g = id => (document.getElementById(id)||{}).value||'';
+  const company=g('f-company'), uid=g('f-uid'), street=g('f-street'), city=g('f-city');
+  const tel=g('f-tel'), email=g('f-email'), web=g('f-web');
+  const iban=g('f-iban'), bic=g('f-bic');
+  const rname=g('r-name'), rstreet=g('r-street'), rcity=g('r-city'), rcountry=g('r-country');
+  const invnr=g('inv-nr'), invdate=g('inv-date'), invdue=g('inv-due');
+  const notes=g('inv-notes');
+  const signText = g('inv-sign') || t('inv-sign-default');
+  const isRtl = lang === 'fa';
+  const { net, tax, total, vatPct } = calcTotals();
+  const senderMini = [company, street, city].filter(Boolean).join(' — ');
+
+  const logoHtml = logoDataUrl
+    ? `<img src="${logoDataUrl}" style="max-height:${logoSize}px;max-width:220px;object-fit:contain;display:block">`
+    : `<div class="inv-logo-placeholder">${(company||'F').charAt(0).toUpperCase()}</div>`;
+
+  const itemRows = items.map((it,i) => `
+    <tr>
+      <td>${i+1}</td>
+      <td>${e(it.desc)||'—'}</td>
+      <td style="text-align:center">${it.qty}</td>
+      <td>${e(it.unit)}</td>
+      <td class="r">${fa(it.price)}</td>
+      <td class="r">${fa(it.qty*it.price)}</td>
+    </tr>`).join('');
+
+  const vatLabel = t('lbl-vat-total').replace('%V%', vatPct+'%');
+
+  document.getElementById('inv-doc').className = 'inv-doc' + (isRtl ? ' rtl-doc' : '');
+  document.getElementById('inv-doc').innerHTML = `
+    <div class="inv-header-row">
+      <div class="inv-logo-zone">${logoHtml}</div>
+      <div class="inv-sender-block">
+        <strong>${e(company)||'Firmenname'}</strong>
+        ${e(street)||'Strasse 1'}<br>
+        ${e(city)||'PLZ Ort'}<br>
+        ${uid ? `<span style="font-size:10.5px;color:#999">${t('lbl-uid-inv')}: ${e(uid)}</span>` : ''}
+      </div>
+    </div>
+
+    <hr class="inv-divider">
+
+    <div class="inv-addr-row">
+      <div>
+        <div class="inv-sender-mini">${e(senderMini) || 'Firmenname — Strasse — PLZ Ort'}</div>
+        <div class="inv-recipient-block">
+          <strong>${e(rname)||'Rechnungsempfänger'}</strong><br>
+          ${e(rstreet)||'Strasse, Nr.'}<br>
+          ${e(rcity)||'PLZ, Ort'}${rcountry ? '<br>'+e(rcountry) : ''}
+        </div>
+      </div>
+      <div class="inv-meta-block">
+        ${invdate ? `<b>${t('lbl-date')}:</b> ${fd(invdate)}<br>` : ''}
+        ${invnr ? `<b>${t('lbl-invnr-inv')}:</b> ${e(invnr)}<br>` : ''}
+        ${invdue ? `<span style="font-size:11px;color:#888">${t('lbl-due-inv')}: ${fd(invdue)}</span>` : ''}
+      </div>
+    </div>
+
+    <div class="inv-title">${t('inv-title')}</div>
+    <div class="inv-title-accent"></div>
+
+    <div class="inv-greeting">${t('inv-greeting').replace('\n','<br>')}</div>
+
+    <table class="inv-tbl">
+      <thead><tr>
+        <th style="width:28px">${t('col-pos')}</th>
+        <th>${t('col-desc')}</th>
+        <th style="width:50px;text-align:center">${t('col-qty')}</th>
+        <th style="width:60px">${t('col-unit')}</th>
+        <th class="r" style="width:96px">${t('col-price')}</th>
+        <th class="r" style="width:96px">${t('col-total')}</th>
+      </tr></thead>
+      <tbody>${itemRows}</tbody>
+    </table>
+
+    <div class="inv-totals-wrap">
+      <table class="inv-totals-tbl">
+        <tr class="row-net">
+          <td>${t('lbl-net')}</td>
+          <td class="r">${fa(net)}</td>
+        </tr>
+        <tr class="row-tax">
+          <td>${vatLabel}</td>
+          <td class="r">${fa(tax)}</td>
+        </tr>
+        <tr class="row-final">
+          <td><b>${t('lbl-grand')}</b></td>
+          <td class="r"><b>${fa(total)}</b></td>
+        </tr>
+      </table>
+    </div>
+
+    ${notes ? `<div class="inv-notes-block">${e(notes).replace(/\n/g,'<br>')}</div>` : ''}
+
+    <div class="inv-sign-block">
+      ${e(signText)}<br><br>
+      ${e(company)||''}
+    </div>
+
+    <div class="inv-footer-bar">
+      <div>
+        <div class="inv-footer-label">${t('lbl-bank')}</div>
+        ${iban ? e(iban)+'<br>' : '—<br>'}
+        ${bic ? 'BIC: '+e(bic) : ''}
+      </div>
+      <div>
+        <div class="inv-footer-label">${t('lbl-contact')}</div>
+        ${tel ? e(tel)+'<br>' : ''}
+        ${email ? e(email)+'<br>' : ''}
+        ${web ? e(web) : ''}
+      </div>
+      <div>
+        <div class="inv-footer-label">${t('lbl-uid-footer')}</div>
+        ${uid ? e(uid) : '—'}
+      </div>
+    </div>
+  `;
+}
+
+function resetForm() {
+  if (!confirm(lang==='fa' ? 'همه اطلاعات پاک شود؟' : 'Wirklich alles zurücksetzen?')) return;
+  ['f-company','f-uid','f-street','f-city','f-tel','f-email','f-web','f-iban','f-bic',
+   'r-name','r-street','r-city','r-country','inv-nr','inv-date','inv-due','inv-notes','inv-sign']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  removeLogo();
+  items = [{ desc:'', qty:1, unit: lang==='fa'?'عدد':'Stück', price:0 }];
+  renderItems();
+}
+
+// Init
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('inv-date').value = today;
+const due = new Date(); due.setDate(due.getDate()+14);
+document.getElementById('inv-due').value = due.toISOString().split('T')[0];
+document.getElementById('inv-nr').value = '2025-001';
+document.getElementById('inv-sign').value = 'Mit freundlichen Grüssen';
+renderItems();
+</script>
+</body>
+</html>
