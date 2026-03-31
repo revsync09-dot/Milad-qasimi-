@@ -97,6 +97,7 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
 /* INVOICE DOCUMENT */
 .inv-doc { background: #fff; padding: 38px 42px; font-family: 'IBM Plex Sans', sans-serif; font-size: 12.5px; line-height: 1.65; color: #222; }
 .inv-header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; }
+.inv-header-row.no-logo { justify-content: flex-end; }
 .inv-logo-zone { flex-shrink: 0; }
 .inv-logo-zone img { display: block; object-fit: contain; }
 .inv-logo-placeholder { width: 64px; height: 64px; background: var(--accent-light); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', serif; font-size: 28px; color: var(--accent); font-weight: 700; }
@@ -142,6 +143,10 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
 .rtl-doc .inv-footer-bar { direction: rtl; }
 
 
+@page {
+  margin: 0;
+}
+
 @media print {
   body { background: #fff !important; }
   .topbar, .form-col, .action-row { display: none !important; }
@@ -150,7 +155,7 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
   .card { box-shadow: none !important; border-radius: 0 !important; }
   .card-head { display: none !important; }
   .card-body { padding: 0 !important; }
-  .inv-doc { padding: 16px 20px !important; }
+  .inv-doc { padding: 20mm 15mm !important; min-height: 297mm; box-sizing: border-box; }
 }
 
 @media (max-width: 960px) {
@@ -463,8 +468,8 @@ function rp() {
   const senderMini = [company, street, city].filter(Boolean).join(' — ');
 
   const logoHtml = logoDataUrl
-    ? `<img src="${logoDataUrl}" style="max-height:${logoSize}px;max-width:220px;object-fit:contain;display:block">`
-    : `<div class="inv-logo-placeholder">${(company||'F').charAt(0).toUpperCase()}</div>`;
+    ? `<div class="inv-logo-zone"><img src="${logoDataUrl}" style="max-height:${logoSize}px;max-width:220px;object-fit:contain;display:block"></div>`
+    : '';
 
   const itemRows = items.map((it,i) => `
     <tr>
@@ -480,8 +485,8 @@ function rp() {
 
   document.getElementById('inv-doc').className = 'inv-doc' + (isRtl ? ' rtl-doc' : '');
   document.getElementById('inv-doc').innerHTML = `
-    <div class="inv-header-row">
-      <div class="inv-logo-zone">${logoHtml}</div>
+    <div class="inv-header-row${logoDataUrl ? '' : ' no-logo'}">
+      ${logoHtml}
       <div class="inv-sender-block">
         <strong>${e(company)||'Firmenname'}</strong>
         ${e(street)||'Strasse 1'}<br>
