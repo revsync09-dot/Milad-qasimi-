@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rechnungsprogramm</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
 <style>
 :root {
   --bg: #f0ede8;
@@ -725,25 +725,35 @@ async function performOCR(input) {
   status.textContent = 'Initialisiere Scanner...';
   fill.style.width = '10%';
 
+  let worker = null;
   try {
     const language = lang === 'fa' ? 'fas' : 'deu';
     
-    // Using the most standard recognize call which handles workers via Blobs automatically
-    const result = await Tesseract.recognize(file, language, {
+    status.textContent = 'Erstelle Worker...';
+    worker = await Tesseract.createWorker({
       logger: m => {
         if (m.status === 'recognizing text') {
-          status.textContent = 'Analysiere Text... ' + Math.round(m.progress * 100) + '%';
-          fill.style.width = (10 + (m.progress * 90)) + '%';
+          status.textContent = 'Analysiere... ' + Math.round(m.progress * 100) + '%';
+          fill.style.width = (20 + (m.progress * 80)) + '%';
         } else {
           status.textContent = (m.status || 'Lädt...') + '...';
         }
       }
     });
 
+    status.textContent = 'Lade Sprache (' + language + ')...';
+    await worker.loadLanguage(language);
+    await worker.initialize(language);
+    
+    status.textContent = 'Erkenne Text...';
+    const { data: { text } } = await worker.recognize(file);
+
     status.textContent = 'Fertig!';
     fill.style.width = '100%';
     
-    analyzeOCRText(result.data.text);
+    analyzeOCRText(text);
+    
+    await worker.terminate();
     
     setTimeout(() => { 
       prog.style.display = 'none'; 
@@ -751,9 +761,12 @@ async function performOCR(input) {
     }, 2000);
 
   } catch (err) {
-    console.error("OCR Error:", err);
+    console.error("OCR Error Details:", err);
+    if (worker) await worker.terminate();
+    
     status.textContent = 'Fehler!';
-    alert('Scanner-Fehler: ' + (err.message || "Sicherheitsblockade des Browsers") + '\n\nBitte versuchen Sie, die Seite in einem anderen Browser (z.B. Chrome oder Edge) zu öffnen oder Adblocker zu deaktivieren.');
+    alert('Scanner-Fehler: ' + (err.message || "Sicherheitsblockade") + 
+          '\n\nDies liegt oft an Browser-Einstellungen oder Adblockern. Bitte versuchen Sie es in einem Inkognito-Fenster oder deaktivieren Sie Adblocker für diese Seite.');
     prog.style.display = 'none';
   }
 }
