@@ -720,6 +720,7 @@ async function performOCR(input) {
   const prog = document.getElementById('scan-progress');
   const fill = document.getElementById('scan-fill');
   const status = document.getElementById('scan-status');
+  
   prog.style.display = 'block';
   status.textContent = 'Initialisiere Scanner...';
   fill.style.width = '10%';
@@ -727,13 +728,16 @@ async function performOCR(input) {
   try {
     const language = lang === 'fa' ? 'fas' : 'deu';
     
+    // Using Tesseract.recognize with explicit worker options for better stability
     const result = await Tesseract.recognize(file, language, {
+      workerBlobURL: false, // Prevents some CSP issues on hosted sites
       logger: m => {
+        console.log("OCR Status:", m);
         if (m.status === 'recognizing text') {
           status.textContent = 'Analysiere Text... ' + Math.round(m.progress * 100) + '%';
           fill.style.width = (10 + (m.progress * 90)) + '%';
         } else {
-          status.textContent = m.status + '...';
+          status.textContent = (m.status || 'Lädt...') + '...';
         }
       }
     });
@@ -749,9 +753,15 @@ async function performOCR(input) {
     }, 2000);
 
   } catch (err) {
-    console.error("OCR Error:", err);
+    console.error("OCR Full Error:", err);
     status.textContent = 'Fehler!';
-    alert('Fehler beim Scannen: ' + err.message + '\n\nBitte stellen Sie sicher, dass Sie eine aktive Internetverbindung haben, damit die Sprachpakete geladen werden können.');
+    
+    let errMsg = "Unbekannter Fehler";
+    if (typeof err === 'string') errMsg = err;
+    else if (err && err.message) errMsg = err.message;
+    else if (err && err.status) errMsg = err.status;
+    
+    alert('Fehler beim Scannen: ' + errMsg + '\n\nDas kann passieren, wenn die Internetverbindung kurz unterbrochen wurde oder der Browser das Scanner-Modul blockiert. Bitte versuchen Sie es erneut oder laden Sie die Seite neu.');
     prog.style.display = 'none';
   }
 }
