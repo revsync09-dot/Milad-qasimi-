@@ -728,12 +728,12 @@ async function performOCR(input) {
   try {
     const language = lang === 'fa' ? 'fas' : 'deu';
     
-    // THE COMPLETE FIX: We use the most direct recognize call but 
-    // we let the library handle the worker creation. 
-    // If it fails, we try a fallback.
-    status.textContent = 'Bereite Analyse vor...';
+    // THE FINAL FIX: Using local files to bypass all security blocks
+    status.textContent = 'Lade Scanner-Module...';
     
     const result = await Tesseract.recognize(file, language, {
+      workerPath: './worker.min.js',
+      corePath: './tesseract-core.wasm.js',
       logger: m => {
         if (m.status === 'recognizing text') {
           status.textContent = 'Analysiere... ' + Math.round(m.progress * 100) + '%';
@@ -757,9 +757,7 @@ async function performOCR(input) {
   } catch (err) {
     console.error("OCR Error:", err);
     status.textContent = 'Fehler!';
-    
-    // If it fails, try a simpler approach as fallback
-    alert('Der Browser blockiert den Scanner. \n\nLösung: Bitte probiere es einmal in einem anderen Browser (z.B. Chrome am PC) oder lade die Seite einmal komplett neu. \n\nDetails: ' + (err.message || "Sicherheitsblockade"));
+    alert('Scanner-Fehler: ' + (err.message || "Sicherheitsblockade") + '\n\nBitte laden Sie die Seite neu. Sollte der Fehler bestehen bleiben, liegt es an einer sehr strengen Browsereinstellung.');
     prog.style.display = 'none';
   }
 }
