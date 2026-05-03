@@ -6,6 +6,7 @@
 <title>Rechnungsprogramm</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 :root {
   --bg: #f0ede8;
@@ -208,10 +209,10 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
         <!-- SCANNER SECTION -->
         <div class="sec" id="lbl-sec-scanner">Rechnungs-Scanner (OCR)</div>
         <div class="scanner-area" id="scanner-dropzone">
-          <input type="file" accept="image/*" onchange="performOCR(this)">
+          <input type="file" accept="image/*,.pdf" onchange="performOCR(this)">
           <div class="scanner-icon">📄</div>
           <div style="font-size:14px; font-weight:600; color:var(--primary)" id="lbl-scan-main">Alte Rechnung scannen & analysieren</div>
-          <div style="font-size:11px; color:var(--muted)" id="lbl-scan-sub">Bild hochladen, um Felder automatisch auszufüllen</div>
+          <div style="font-size:11px; color:var(--muted)" id="lbl-scan-sub">Bild oder PDF hochladen, um Felder automatisch auszufüllen</div>
           <div class="scanner-progress" id="scan-progress">
             <div style="font-size:11px; color:var(--accent); font-weight:600" id="scan-status">Analysiere...</div>
             <div class="progress-bar"><div class="progress-fill" id="scan-fill"></div></div>
@@ -714,6 +715,7 @@ function selectCustomer(i) {
 }
 
 // OCR Logic
+// OCR Logic with PDF Support
 async function performOCR(input) {
   const file = input.files[0];
   if (!file) return;
@@ -722,22 +724,38 @@ async function performOCR(input) {
   const status = document.getElementById('scan-status');
   
   prog.style.display = 'block';
-  status.textContent = 'Initialisiere Scanner...';
+  status.textContent = 'Bereite Datei vor...';
   fill.style.width = '10%';
 
   try {
+    let source = file;
+
+    // Handle PDF conversion
+    if (file.type === 'application/pdf') {
+      status.textContent = 'Konvertiere PDF zu Bild...';
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const page = await pdf.getPage(1);
+      const viewport = page.getViewport({ scale: 2.0 });
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      await page.render({ canvasContext: context, viewport: viewport }).promise;
+      source = canvas.toDataURL('image/png');
+      fill.style.width = '30%';
+    }
+
     const language = lang === 'fa' ? 'fas' : 'deu';
+    status.textContent = 'Initialisiere Scanner...';
     
-    // THE FINAL FIX: Using local files to bypass all security blocks
-    status.textContent = 'Lade Scanner-Module...';
-    
-    const result = await Tesseract.recognize(file, language, {
-      workerPath: './worker.min.js',
-      corePath: './tesseract-core.wasm.js',
+    const result = await Tesseract.recognize(source, language, {
+      workerBlobURL: true,
+      langPath: 'https://cdn.jsdelivr.net/npm/@progers/tessdata@1.0.1/', // Reliable fallback lang path
       logger: m => {
         if (m.status === 'recognizing text') {
           status.textContent = 'Analysiere... ' + Math.round(m.progress * 100) + '%';
-          fill.style.width = (20 + (m.progress * 80)) + '%';
+          fill.style.width = (30 + (m.progress * 70)) + '%';
         } else {
           status.textContent = (m.status || 'Lädt...') + '...';
         }
@@ -757,7 +775,7 @@ async function performOCR(input) {
   } catch (err) {
     console.error("OCR Error:", err);
     status.textContent = 'Fehler!';
-    alert('Scanner-Fehler: ' + (err.message || "Sicherheitsblockade") + '\n\nBitte laden Sie die Seite neu. Sollte der Fehler bestehen bleiben, liegt es an einer sehr strengen Browsereinstellung.');
+    alert('Fehler beim Scannen: ' + (err.message || "Sicherheitsblockade") + '\n\nBitte stellen Sie sicher, dass das Dokument lesbar ist und Ihre Internetverbindung aktiv ist.');
     prog.style.display = 'none';
   }
 }
