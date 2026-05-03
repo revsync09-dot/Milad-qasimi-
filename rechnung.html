@@ -721,23 +721,37 @@ async function performOCR(input) {
   const fill = document.getElementById('scan-fill');
   const status = document.getElementById('scan-status');
   prog.style.display = 'block';
+  status.textContent = 'Initialisiere Scanner...';
+  fill.style.width = '10%';
 
   try {
-    const worker = await Tesseract.createWorker(lang === 'fa' ? 'fas' : 'deu');
-    status.textContent = 'Lade OCR-Modul...';
-    fill.style.width = '20%';
+    const language = lang === 'fa' ? 'fas' : 'deu';
     
-    const { data: { text } } = await worker.recognize(file);
-    fill.style.width = '100%';
+    const result = await Tesseract.recognize(file, language, {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          status.textContent = 'Analysiere Text... ' + Math.round(m.progress * 100) + '%';
+          fill.style.width = (10 + (m.progress * 90)) + '%';
+        } else {
+          status.textContent = m.status + '...';
+        }
+      }
+    });
+
     status.textContent = 'Fertig!';
+    fill.style.width = '100%';
     
-    analyzeOCRText(text);
-    await worker.terminate();
+    analyzeOCRText(result.data.text);
     
-    setTimeout(() => { prog.style.display = 'none'; fill.style.width = '0%'; }, 2000);
+    setTimeout(() => { 
+      prog.style.display = 'none'; 
+      fill.style.width = '0%'; 
+    }, 2000);
+
   } catch (err) {
-    console.error(err);
-    alert('Fehler beim Scannen.');
+    console.error("OCR Error:", err);
+    status.textContent = 'Fehler!';
+    alert('Fehler beim Scannen: ' + err.message + '\n\nBitte stellen Sie sicher, dass Sie eine aktive Internetverbindung haben, damit die Sprachpakete geladen werden können.');
     prog.style.display = 'none';
   }
 }
