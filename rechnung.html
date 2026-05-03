@@ -751,7 +751,7 @@ async function performOCR(input) {
     
     const result = await Tesseract.recognize(source, language, {
       workerBlobURL: true,
-      langPath: 'https://cdn.jsdelivr.net/npm/@progers/tessdata@1.0.1/', // Reliable fallback lang path
+      langPath: 'https://tessdata.projectnaptha.com/4.0.0/', // Official stable lang path
       logger: m => {
         if (m.status === 'recognizing text') {
           status.textContent = 'Analysiere... ' + Math.round(m.progress * 100) + '%';
