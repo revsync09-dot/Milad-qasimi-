@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rechnungsprogramm</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <style>
 :root {
   --bg: #f0ede8;
@@ -728,11 +728,9 @@ async function performOCR(input) {
   try {
     const language = lang === 'fa' ? 'fas' : 'deu';
     
-    // Using Tesseract.recognize with explicit worker options for better stability
+    // Using the most standard recognize call which handles workers via Blobs automatically
     const result = await Tesseract.recognize(file, language, {
-      workerBlobURL: false, // Prevents some CSP issues on hosted sites
       logger: m => {
-        console.log("OCR Status:", m);
         if (m.status === 'recognizing text') {
           status.textContent = 'Analysiere Text... ' + Math.round(m.progress * 100) + '%';
           fill.style.width = (10 + (m.progress * 90)) + '%';
@@ -753,15 +751,9 @@ async function performOCR(input) {
     }, 2000);
 
   } catch (err) {
-    console.error("OCR Full Error:", err);
+    console.error("OCR Error:", err);
     status.textContent = 'Fehler!';
-    
-    let errMsg = "Unbekannter Fehler";
-    if (typeof err === 'string') errMsg = err;
-    else if (err && err.message) errMsg = err.message;
-    else if (err && err.status) errMsg = err.status;
-    
-    alert('Fehler beim Scannen: ' + errMsg + '\n\nDas kann passieren, wenn die Internetverbindung kurz unterbrochen wurde oder der Browser das Scanner-Modul blockiert. Bitte versuchen Sie es erneut oder laden Sie die Seite neu.');
+    alert('Scanner-Fehler: ' + (err.message || "Sicherheitsblockade des Browsers") + '\n\nBitte versuchen Sie, die Seite in einem anderen Browser (z.B. Chrome oder Edge) zu öffnen oder Adblocker zu deaktivieren.');
     prog.style.display = 'none';
   }
 }
