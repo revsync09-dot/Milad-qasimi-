@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rechnungsprogramm</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 :root {
   --bg: #f0ede8;
@@ -158,6 +159,23 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
   .inv-doc { padding: 20mm 15mm !important; min-height: 297mm; box-sizing: border-box; }
 }
 
+/* SCANNER AREA */
+.scanner-area { border: 2px dashed var(--accent); border-radius: var(--radius); padding: 24px; text-align: center; background: #fff; margin-bottom: 24px; cursor: pointer; transition: 0.2s; position: relative; }
+.scanner-area:hover { background: #fdf8f2; border-color: var(--primary); }
+.scanner-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.scanner-icon { font-size: 32px; margin-bottom: 8px; }
+.scanner-progress { display: none; margin-top: 12px; }
+.progress-bar { height: 6px; background: #eee; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
+
+/* DATABASE BUTTONS */
+.db-actions { display: flex; gap: 8px; margin-top: 4px; }
+.btn-mini { padding: 4px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+.cust-list { position: absolute; background: white; border: 1.5px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); z-index: 100; max-height: 200px; overflow-y: auto; width: 100%; display: none; }
+.cust-item { padding: 8px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f0ede8; }
+.cust-item:hover { background: #fdf8f2; color: var(--accent); }
+.cust-item:last-child { border-bottom: none; }
+
 @media (max-width: 960px) {
   .wrap { grid-template-columns: 1fr; }
   .preview-col { position: static; }
@@ -187,6 +205,19 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
       <div class="card-head" id="lbl-formtitle">Rechnung erstellen</div>
       <div class="card-body">
 
+        <!-- SCANNER SECTION -->
+        <div class="sec" id="lbl-sec-scanner">Rechnungs-Scanner (OCR)</div>
+        <div class="scanner-area" id="scanner-dropzone">
+          <input type="file" accept="image/*" onchange="performOCR(this)">
+          <div class="scanner-icon">📄</div>
+          <div style="font-size:14px; font-weight:600; color:var(--primary)" id="lbl-scan-main">Alte Rechnung scannen & analysieren</div>
+          <div style="font-size:11px; color:var(--muted)" id="lbl-scan-sub">Bild hochladen, um Felder automatisch auszufüllen</div>
+          <div class="scanner-progress" id="scan-progress">
+            <div style="font-size:11px; color:var(--accent); font-weight:600" id="scan-status">Analysiere...</div>
+            <div class="progress-bar"><div class="progress-fill" id="scan-fill"></div></div>
+          </div>
+        </div>
+
         <div class="sec" id="lbl-sec-logo">Firmenlogo</div>
         <div id="logo-upload-area" class="logo-upload-area">
           <input type="file" accept="image/*" onchange="handleLogo(this)">
@@ -215,6 +246,10 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
           <div class="fg"><label id="lbl-street">Strasse &amp; Nr.</label><input id="f-street" placeholder="Musterstrasse 1" oninput="rp()"></div>
           <div class="fg"><label id="lbl-city">PLZ &amp; Ort</label><input id="f-city" placeholder="1010 Wien" oninput="rp()"></div>
         </div>
+        <div class="db-actions">
+           <button class="btn btn-dark btn-mini" onclick="saveCompanyData()" id="btn-savecompany">Firma speichern</button>
+           <button class="btn btn-ghost btn-mini" onclick="loadCompanyData()" id="btn-loadcompany">Firma laden</button>
+        </div>
 
         </div>
         <div class="row3">
@@ -235,6 +270,13 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
         <div class="row2">
           <div class="fg"><label id="lbl-rplz">PLZ &amp; Ort</label><input id="r-city" placeholder="1010 Wien" oninput="rp()"></div>
           <div class="fg"><label id="lbl-rcountry">Land</label><input id="r-country" placeholder="Osterreich" oninput="rp()"></div>
+        </div>
+        <div style="position:relative">
+          <div class="db-actions">
+            <button class="btn btn-dark btn-mini" onclick="saveCustomer()" id="btn-savecust">Kunde speichern</button>
+            <button class="btn btn-ghost btn-mini" onclick="toggleCustomerList()" id="btn-selectcust">Gespeicherte Kunden</button>
+          </div>
+          <div id="cust-list-dropdown" class="cust-list"></div>
         </div>
 
         <div class="sec" id="lbl-sec-details">Rechnungsdetails</div>
@@ -324,6 +366,8 @@ const L = {
     'lbl-net':'Nettopreis','lbl-vat-total':'Zzgl. %V% MwSt.','lbl-grand':'Rechnungsbetrag',
     'lbl-bank':'Bankverbindung','lbl-contact':'Kontakt','lbl-uid-footer':'UID-Nummer',
     'lbl-date':'Datum','lbl-invnr-inv':'Rechnungsnummer','lbl-due-inv':'Fällig bis','lbl-uid-inv':'UID-Nummer',
+    'lbl-sec-scanner':'Rechnungs-Scanner (OCR)','lbl-scan-main':'Alte Rechnung scannen & analysieren','lbl-scan-sub':'Bild hochladen, um Felder automatisch auszufüllen',
+    'btn-savecompany':'Firma speichern','btn-loadcompany':'Firma laden','btn-savecust':'Kunde speichern','btn-selectcust':'Gespeicherte Kunden',
   },
   fa: {
     'lbl-formtitle':'ایجاد صورتحساب','tb-name':'Rechnungsprogramm','tb-sub':'برنامه صورتحساب',
@@ -341,6 +385,8 @@ const L = {
     'lbl-net':'مبلغ خالص','lbl-vat-total':'مالیات بر ارزش افزوده %V%','lbl-grand':'مبلغ کل',
     'lbl-bank':'اطلاعات بانکی','lbl-contact':'تماس','lbl-uid-footer':'شماره UID',
     'lbl-date':'تاریخ','lbl-invnr-inv':'شماره صورتحساب','lbl-due-inv':'تاریخ سررسید','lbl-uid-inv':'شماره UID',
+    'lbl-sec-scanner':'اسکنر صورتحساب (OCR)','lbl-scan-main':'اسکن و تحلیل صورتحساب قدیمی','lbl-scan-sub':'برای پر کردن خودکار فیلدها، تصویر را آپلود کنید',
+    'btn-savecompany':'ذخیره شرکت','btn-loadcompany':'بارگذاری شرکت','btn-savecust':'ذخیره مشتری','btn-selectcust':'مشتریان ذخیره شده',
   }
 };
 
@@ -584,6 +630,180 @@ function resetForm() {
   renderItems();
 }
 
+// Database Logic
+function saveCompanyData() {
+  const data = {
+    company: document.getElementById('f-company').value,
+    uid: document.getElementById('f-uid').value,
+    street: document.getElementById('f-street').value,
+    city: document.getElementById('f-city').value,
+    tel: document.getElementById('f-tel').value,
+    email: document.getElementById('f-email').value,
+    web: document.getElementById('f-web').value,
+    iban: document.getElementById('f-iban').value,
+    bic: document.getElementById('f-bic').value,
+    logo: logoDataUrl,
+    logoSize: logoSize
+  };
+  localStorage.setItem('rp_company', JSON.stringify(data));
+  alert(lang==='fa' ? 'اطلاعات شرکت ذخیره شد' : 'Firmendaten gespeichert!');
+}
+
+function loadCompanyData() {
+  const raw = localStorage.getItem('rp_company');
+  if (!raw) return alert(lang==='fa' ? 'اطلاعاتی پیدا نشد' : 'Keine gespeicherten Daten gefunden.');
+  const data = JSON.parse(raw);
+  document.getElementById('f-company').value = data.company || '';
+  document.getElementById('f-uid').value = data.uid || '';
+  document.getElementById('f-street').value = data.street || '';
+  document.getElementById('f-city').value = data.city || '';
+  document.getElementById('f-tel').value = data.tel || '';
+  document.getElementById('f-email').value = data.email || '';
+  document.getElementById('f-web').value = data.web || '';
+  document.getElementById('f-iban').value = data.iban || '';
+  document.getElementById('f-bic').value = data.bic || '';
+  if (data.logo) {
+    logoDataUrl = data.logo;
+    const img = document.getElementById('logo-preview-img');
+    img.src = logoDataUrl;
+    logoSize = data.logoSize || 80;
+    img.style.maxHeight = logoSize + 'px';
+    document.getElementById('logo-upload-area').style.display = 'none';
+    document.getElementById('logo-preview-wrap').style.display = 'flex';
+    document.getElementById('logo-size-row').style.display = 'flex';
+    document.getElementById('logo-size-range').value = logoSize;
+    document.getElementById('logo-size-val').textContent = logoSize + 'px';
+  }
+  rp();
+}
+
+function saveCustomer() {
+  const name = document.getElementById('r-name').value;
+  if (!name) return alert('Bitte Name eingeben.');
+  const customers = JSON.parse(localStorage.getItem('rp_customers') || '[]');
+  const data = {
+    name,
+    street: document.getElementById('r-street').value,
+    city: document.getElementById('r-city').value,
+    country: document.getElementById('r-country').value
+  };
+  const idx = customers.findIndex(c => c.name === name);
+  if (idx > -1) customers[idx] = data; else customers.push(data);
+  localStorage.setItem('rp_customers', JSON.stringify(customers));
+  alert('Kunde gespeichert!');
+}
+
+function toggleCustomerList() {
+  const div = document.getElementById('cust-list-dropdown');
+  if (div.style.display === 'block') { div.style.display = 'none'; return; }
+  const customers = JSON.parse(localStorage.getItem('rp_customers') || '[]');
+  if (!customers.length) return alert('Keine Kunden gespeichert.');
+  div.innerHTML = customers.map((c, i) => `<div class="cust-item" onclick="selectCustomer(${i})">${e(c.name)}</div>`).join('');
+  div.style.display = 'block';
+}
+
+function selectCustomer(i) {
+  const customers = JSON.parse(localStorage.getItem('rp_customers') || '[]');
+  const c = customers[i];
+  document.getElementById('r-name').value = c.name;
+  document.getElementById('r-street').value = c.street;
+  document.getElementById('r-city').value = c.city;
+  document.getElementById('r-country').value = c.country;
+  document.getElementById('cust-list-dropdown').style.display = 'none';
+  rp();
+}
+
+// OCR Logic
+async function performOCR(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const prog = document.getElementById('scan-progress');
+  const fill = document.getElementById('scan-fill');
+  const status = document.getElementById('scan-status');
+  prog.style.display = 'block';
+
+  try {
+    const worker = await Tesseract.createWorker(lang === 'fa' ? 'fas' : 'deu');
+    status.textContent = 'Lade OCR-Modul...';
+    fill.style.width = '20%';
+    
+    const { data: { text } } = await worker.recognize(file);
+    fill.style.width = '100%';
+    status.textContent = 'Fertig!';
+    
+    analyzeOCRText(text);
+    await worker.terminate();
+    
+    setTimeout(() => { prog.style.display = 'none'; fill.style.width = '0%'; }, 2000);
+  } catch (err) {
+    console.error(err);
+    alert('Fehler beim Scannen.');
+    prog.style.display = 'none';
+  }
+}
+
+function analyzeOCRText(text) {
+  console.log("Scanned Text:", text);
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+  
+  // 1. Rechnungsnummer
+  const invMatch = text.match(/(?:Rechnungs|Rechnung|Invoice)-?Nr\.?\s*:?\s*([A-Z0-9-/]+)/i);
+  if (invMatch) document.getElementById('inv-nr').value = invMatch[1];
+
+  // 2. Datum
+  const dateMatches = text.match(/(\d{2}\.\d{2}\.\d{4})/g);
+  if (dateMatches && dateMatches.length > 0) {
+    const d = dateMatches[0].split('.');
+    document.getElementById('inv-date').value = `${d[2]}-${d[1]}-${d[0]}`;
+  }
+
+  // 3. IBAN & UID (Sender/Receiver fallback)
+  const ibanMatch = text.match(/[A-Z]{2}\d{2}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{2}/i);
+  if (ibanMatch) document.getElementById('f-iban').value = ibanMatch[0].replace(/\s/g, '');
+  const uidMatch = text.match(/(?:UID|VAT|Ust-IdNr)\s*:?\s*([A-Z]{2}[0-9]+)/i);
+  if (uidMatch) document.getElementById('f-uid').value = uidMatch[1];
+
+  // 4. Name & Adresse (Heuristic)
+  // Usually, the recipient is in the first 10 lines, often after some headers
+  // We look for a block that contains a 4-5 digit ZIP code (AT/DE)
+  let recipientStartIndex = -1;
+  for(let i=0; i < Math.min(lines.length, 15); i++) {
+    // Check if line contains a ZIP code pattern like "1010 Wien" or "D-12345"
+    if (/\b\d{4,5}\b/.test(lines[i])) {
+      recipientStartIndex = i;
+      break;
+    }
+  }
+
+  if (recipientStartIndex !== -1) {
+    // The ZIP/City line
+    const cityLine = lines[recipientStartIndex];
+    document.getElementById('r-city').value = cityLine;
+
+    // The line before is usually the street
+    if (recipientStartIndex > 0) {
+      document.getElementById('r-street').value = lines[recipientStartIndex - 1];
+    }
+
+    // The line before the street is usually the name/company
+    if (recipientStartIndex > 1) {
+      document.getElementById('r-name').value = lines[recipientStartIndex - 2];
+    }
+    
+    // If there's another line above, it might be part of the name
+    if (recipientStartIndex > 2 && !/Rechnung|Datum|An:/i.test(lines[recipientStartIndex - 3])) {
+       document.getElementById('r-name').value = lines[recipientStartIndex - 3] + " " + lines[recipientStartIndex - 2];
+    }
+  }
+
+  // 5. Try to find Total Amount (to check if it was read correctly)
+  const totalMatch = text.match(/(?:Gesamt|Total|Summe|Endbetrag)\s*:?\s*(\d+[,.]\d{2})/i);
+  if (totalMatch) console.log("Total detected:", totalMatch[1]);
+
+  alert(lang==='fa' ? 'اسکن کامل شد. فیلدها پر شدند.' : "Scan abgeschlossen. Name und Adresse wurden nach bestem Wissen erkannt. Bitte prüfen!");
+  rp();
+}
+
 // Init
 const today = new Date().toISOString().split('T')[0];
 document.getElementById('inv-date').value = today;
@@ -591,6 +811,7 @@ const due = new Date(); due.setDate(due.getDate()+14);
 document.getElementById('inv-due').value = due.toISOString().split('T')[0];
 document.getElementById('inv-nr').value = '2025-001';
 document.getElementById('inv-sign').value = 'Mit freundlichen Grüssen';
+loadCompanyData(); // Auto-load company if exists
 renderItems();
 </script>
 </body>
